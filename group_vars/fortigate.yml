@@ -1,7 +1,7 @@
 ---
 # FortiGate API credentials
-fortigate_api_user: lakhi_api
-fortigate_api_key: 8kmQh9pmbpr8dmghmQ0p7kryrdtHQ6
+fortigate_api_user: api_user
+fortigate_api_key: token
 
 # Backup directory
 backup_dir: /ansible/Backup
