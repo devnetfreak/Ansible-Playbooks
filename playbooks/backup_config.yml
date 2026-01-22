@@ -1,0 +1,52 @@
+---
+- name: FortiGate Configuration Backup
+  hosts: fortigate
+  gather_facts: false
+  vars:
+    fortigate_api_user: lakhi_api
+    fortigate_api_key: 8kmQh9pmbpr8dmghmQ0p7kryrdtHQ6
+    backup_dir: /ansible/Backup
+
+  tasks:
+    - name: Set backup timestamp
+      set_fact:
+        backup_timestamp: "{{ now(utc=true, fmt='%Y%m%d_%H%M%S') }}"
+        backup_filename: "{{ backup_dir }}/fortigate_{{ inventory_hostname }}_{{ now(utc=true, fmt='%Y%m%d_%H%M%S') }}.conf"
+
+    - name: Display backup task information
+      debug:
+        msg: "Starting backup for {{ inventory_hostname }} ({{ ansible_host }}:{{ ansible_httpapi_port }})"
+
+    - name: Backup FortiGate configuration via API
+      uri:
+        url: "https://{{ ansible_host }}:{{ ansible_httpapi_port }}/api/v2/monitor/system/config/backup?access_token={{ fortigate_api_key }}"
+        method: POST
+        body_format: json
+        body:
+          scope: global
+        validate_certs: false
+        return_content: true
+        dest: "{{ backup_filename }}"
+      register: backup_result
+
+    - name: Display backup result
+      debug:
+        msg: "Backup API response status: {{ backup_result.status }}"
+
+    - name: Verify backup file
+      stat:
+        path: "{{ backup_filename }}"
+      register: backup_stat
+      delegate_to: localhost
+
+    - name: Display backup file details
+      debug:
+        msg: "Backup file size: {{ backup_stat.stat.size }} bytes"
+      when: backup_stat.stat.exists
+      delegate_to: localhost
+
+    - name: Success message
+      debug:
+        msg: "✓ Backup completed successfully for {{ inventory_hostname }} at {{ backup_filename }}"
+      when: backup_stat.stat.exists
+      delegate_to: localhost
