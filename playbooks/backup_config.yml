@@ -3,8 +3,8 @@
   hosts: fortigate
   gather_facts: false
   vars:
-    fortigate_api_user: lakhi_api
-    fortigate_api_key: 8kmQh9pmbpr8dmghmQ0p7kryrdtHQ6
+    fortigate_api_user: apiuser
+    fortigate_api_key: token
     backup_dir: /ansible/Backup
 
   tasks:
