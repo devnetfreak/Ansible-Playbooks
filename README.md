@@ -24,7 +24,7 @@ Ansible playbook to backup FortiGate firewall configuration via REST API.
 - **Location**: `inventory/hosts.yml`
 
 ### Credentials
-- **API User**: `lakhi_api`
+- **API User**: `api_user`
 - **API Key**: Stored in `group_vars/fortigate.yml`
 
 ### Backup Location
@@ -48,7 +48,7 @@ ansible-playbook playbooks/backup_config.yml
 
 Backups are saved to `/ansible/Backup/` with timestamp:
 ```
-fortigate_fortigate_primary_20260120T1530.conf
+fortigate_config.conf
 ```
 
 ## Notes
