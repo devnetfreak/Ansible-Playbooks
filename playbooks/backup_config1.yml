@@ -1,0 +1,78 @@
+---
+- name: FortiGate Configuration Backup
+  hosts: fortigate
+  gather_facts: false
+  vars_files:
+    - "/etc/ansible/group_vars/fortigate.yml"
+  vars:
+    # Prefer using group_vars for credentials (see group_vars/fortigate.yml)
+    # Defaults are applied at use-time to avoid recursion.
+
+  tasks:
+    - name: Set backup timestamp
+      set_fact:
+        backup_timestamp: "{{ now(utc=true, fmt='%Y%m%d_%H%M%S') }}"
+
+    - name: Ensure API key is set
+      assert:
+        that:
+          - fortigate_api_key is defined
+          - (fortigate_api_key | length) > 0
+        fail_msg: "fortigate_api_key is missing. Set it in group_vars/fortigate.yml"
+
+    - name: Set backup directory and filename
+      set_fact:
+        backup_dir_resolved: "{{ backup_dir | default('/opt/backups/fortigates') }}"
+        backup_filename: "{{ (backup_dir | default('/opt/backups/fortigates')) }}/fortigate_{{ inventory_hostname }}_{{ backup_timestamp }}.conf"
+
+    - name: Ensure backup directory exists on Ansible controller
+      file:
+        path: "{{ backup_dir_resolved }}"
+        state: directory
+        mode: "0750"
+      delegate_to: localhost
+
+    - name: Display backup task information
+      debug:
+        msg: "Starting backup for {{ inventory_hostname }} ({{ ansible_host }}:{{ ansible_httpapi_port }})"
+
+    - name: Backup FortiGate configuration via API
+      uri:
+        url: "https://{{ ansible_host }}:{{ ansible_httpapi_port | default(443) }}/api/v2/monitor/system/config/backup?scope={{ backup_scope | default('global') }}&vdom={{ vdom | default('root') }}"
+        method: POST
+        headers:
+          Authorization: "Bearer {{ fortigate_api_key }}"
+          Accept: "application/octet-stream"
+        validate_certs: false
+        return_content: true
+      register: backup_result
+      no_log: true
+
+    - name: Save backup file on Ansible controller
+      copy:
+        content: "{{ backup_result.content }}"
+        dest: "{{ backup_filename }}"
+        mode: "0600"
+      delegate_to: localhost
+
+    - name: Display backup result
+      debug:
+        msg: "Backup API response status: {{ backup_result.status }}"
+
+    - name: Verify backup file
+      stat:
+        path: "{{ backup_filename }}"
+      register: backup_stat
+      delegate_to: localhost
+
+    - name: Display backup file details
+      debug:
+        msg: "Backup file size: {{ backup_stat.stat.size }} bytes"
+      when: backup_stat.stat.exists
+      delegate_to: localhost
+
+    - name: Success message
+      debug:
+        msg: "✓ Backup completed successfully for {{ inventory_hostname }} at {{ backup_filename }}"
+      when: backup_stat.stat.exists
+      delegate_to: localhost
